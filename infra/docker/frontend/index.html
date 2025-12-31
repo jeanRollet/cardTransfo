@@ -1,0 +1,101 @@
+  <!DOCTYPE html>
+  <html lang="fr">
+  <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>CardDemo POC</title>
+      <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body {
+              font-family: Arial, sans-serif;
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              min-height: 100vh;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              color: white;
+          }
+          .container {
+              background: rgba(255, 255, 255, 0.1);
+              backdrop-filter: blur(10px);
+              border-radius: 20px;
+              padding: 40px;
+              max-width: 700px;
+              text-align: center;
+          }
+          h1 { font-size: 3em; margin-bottom: 15px; }
+          .badge {
+              background: #10b981;
+              padding: 10px 20px;
+              border-radius: 20px;
+              margin: 8px;
+              display: inline-block;
+              font-size: 0.95em;
+          }
+          .services {
+              margin: 30px 0;
+              display: grid;
+              grid-template-columns: repeat(3, 1fr);
+              gap: 15px;
+          }
+          .service {
+              background: rgba(255, 255, 255, 0.15);
+              padding: 20px;
+              border-radius: 10px;
+              border-left: 3px solid #10b981;
+          }
+          .service-name { font-weight: bold; font-size: 1.1em; margin-bottom: 8px; }
+          .info-box {
+              background: rgba(0, 0, 0, 0.2);
+              padding: 20px;
+              border-radius: 10px;
+              margin: 20px 0;
+              text-align: left;
+          }
+          .footer { margin-top: 25px; opacity: 0.8; font-size: 0.9em; }
+      </style>
+  </head>
+  <body>
+      <div class="container">
+          <h1>🎯 CardDemo</h1>
+          <p style="font-size: 1.1em; margin-bottom: 20px;">
+              Transformation COBOL/CICS vers Microservices
+          </p>
+
+          <div style="margin: 25px 0;">
+              <span class="badge">✅ Docker Active</span>
+              <span class="badge">🐘 PostgreSQL</span>
+              <span class="badge">⚡ Redis</span>
+          </div>
+
+          <div class="services">
+              <div class="service">
+                  <div class="service-name">🐘 PostgreSQL</div>
+                  <div style="font-size: 0.9em;">Port 5432</div>
+              </div>
+              <div class="service">
+                  <div class="service-name">⚡ Redis</div>
+                  <div style="font-size: 0.9em;">Port 6379</div>
+              </div>
+              <div class="service">
+                  <div class="service-name">🌐 Frontend</div>
+                  <div style="font-size: 0.9em;">Port 3000</div>
+              </div>
+          </div>
+
+          <div class="info-box">
+              <h3 style="margin-bottom: 12px;">🔗 Connexions</h3>
+              <p style="margin: 5px 0; font-size: 0.9em;">
+                  PostgreSQL: <code>psql -h 13.37.173.179 -p 5432 -U carddemo</code>
+              </p>
+              <p style="margin: 5px 0; font-size: 0.9em;">
+                  Redis: <code>redis-cli -h 13.37.173.179 -p 6379</code>
+              </p>
+          </div>
+
+          <div class="footer">
+              <p>🚀 imagine-ops.com | ⚡ Powered by Docker Compose</p>
+          </div>
+      </div>
+  </body>
+  </html>
