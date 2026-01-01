@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS users (
     last_name VARCHAR(20) NOT NULL,
     password_hash VARCHAR(60) NOT NULL,  -- BCrypt hash
     user_type CHAR(1) NOT NULL CHECK (user_type IN ('A', 'U')),
+    customer_id INTEGER,  -- Link to customer for regular users (NULL for admins)
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -223,6 +224,107 @@ CREATE INDEX idx_sessions_expires ON user_sessions(expires_at);
 CREATE INDEX idx_sessions_active ON user_sessions(is_active, expires_at);
 
 -- ============================================================================
+-- PARTNERS TABLE (for external API integrations)
+-- Replaces: CICS Web Services / MQ Series partner configurations
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS partners (
+    partner_id SERIAL PRIMARY KEY,
+    partner_name VARCHAR(100) NOT NULL UNIQUE,
+    partner_type VARCHAR(20) NOT NULL CHECK (partner_type IN ('FINTECH', 'MERCHANT', 'PROCESSOR', 'BANK')),
+    contact_email VARCHAR(100) NOT NULL UNIQUE,
+    contact_phone VARCHAR(20),
+    webhook_url VARCHAR(255),
+    allowed_scopes TEXT[],
+    rate_limit_per_minute INTEGER DEFAULT 60,
+    daily_quota INTEGER DEFAULT 10000,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE partners IS 'External API partner registry (replaces CICS Web Services partner config)';
+COMMENT ON COLUMN partners.partner_type IS 'FINTECH, MERCHANT, PROCESSOR, or BANK';
+COMMENT ON COLUMN partners.allowed_scopes IS 'Array of allowed API scopes (e.g., accounts:read, transactions:read)';
+COMMENT ON COLUMN partners.rate_limit_per_minute IS 'Max requests per minute (replaces CICS transaction limits)';
+
+CREATE INDEX idx_partners_type ON partners(partner_type);
+CREATE INDEX idx_partners_active ON partners(is_active);
+
+-- ============================================================================
+-- PARTNER API KEYS TABLE
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS partner_api_keys (
+    key_id SERIAL PRIMARY KEY,
+    partner_id INTEGER NOT NULL REFERENCES partners(partner_id) ON DELETE CASCADE,
+    api_key_hash VARCHAR(256) NOT NULL,
+    key_prefix VARCHAR(12) NOT NULL,
+    key_suffix VARCHAR(8),
+    description VARCHAR(100),
+    scopes TEXT[],
+    expires_at TIMESTAMP,
+    last_used_at TIMESTAMP,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE partner_api_keys IS 'Partner API keys (hashed, not stored in plain text)';
+COMMENT ON COLUMN partner_api_keys.api_key_hash IS 'SHA-256 hash of the API key';
+COMMENT ON COLUMN partner_api_keys.key_prefix IS 'Key prefix for identification (e.g., pk_live_, pk_test_)';
+
+CREATE INDEX idx_partner_keys_hash ON partner_api_keys(api_key_hash);
+CREATE INDEX idx_partner_keys_partner ON partner_api_keys(partner_id);
+CREATE INDEX idx_partner_keys_active ON partner_api_keys(is_active);
+
+-- ============================================================================
+-- PARTNER API LOGS TABLE (Audit trail for partner API requests)
+-- Replaces: SMF Records from mainframe
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS partner_api_logs (
+    log_id BIGSERIAL PRIMARY KEY,
+    partner_id INTEGER REFERENCES partners(partner_id),
+    api_key_prefix VARCHAR(12),
+    endpoint VARCHAR(255),
+    method VARCHAR(10),
+    status_code INTEGER,
+    response_time_ms INTEGER,
+    ip_address INET,
+    user_agent VARCHAR(255),
+    request_body_size INTEGER,
+    response_body_size INTEGER,
+    error_code VARCHAR(50),
+    error_message VARCHAR(500),
+    request_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE partner_api_logs IS 'Partner API request audit trail (replaces SMF records)';
+
+CREATE INDEX idx_partner_logs_partner ON partner_api_logs(partner_id);
+CREATE INDEX idx_partner_logs_timestamp ON partner_api_logs(request_timestamp DESC);
+CREATE INDEX idx_partner_logs_endpoint ON partner_api_logs(endpoint);
+CREATE INDEX idx_partner_logs_status ON partner_api_logs(status_code);
+
+-- ============================================================================
+-- PARTNER DAILY USAGE TABLE (for quota enforcement)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS partner_daily_usage (
+    usage_id SERIAL PRIMARY KEY,
+    partner_id INTEGER NOT NULL REFERENCES partners(partner_id),
+    usage_date DATE NOT NULL,
+    request_count INTEGER DEFAULT 0,
+    successful_count INTEGER DEFAULT 0,
+    failed_count INTEGER DEFAULT 0,
+    UNIQUE(partner_id, usage_date)
+);
+
+COMMENT ON TABLE partner_daily_usage IS 'Daily API usage tracking for quota enforcement';
+
+CREATE INDEX idx_partner_usage_partner_date ON partner_daily_usage(partner_id, usage_date DESC);
+
+-- ============================================================================
 -- TRIGGERS FOR updated_at COLUMNS
 -- ============================================================================
 
@@ -251,6 +353,11 @@ CREATE TRIGGER trigger_accounts_updated_at
 
 CREATE TRIGGER trigger_cards_updated_at
     BEFORE UPDATE ON credit_cards
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER trigger_partners_updated_at
+    BEFORE UPDATE ON partners
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 

@@ -1,6 +1,8 @@
 package com.carddemo.auth.controller;
 
+import com.carddemo.auth.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -10,7 +12,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -44,6 +45,8 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 @Slf4j
 public class AuthController {
+
+    private final AuthService authService;
 
     /**
      * Login endpoint
@@ -81,26 +84,22 @@ public class AuthController {
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
         log.info("Login attempt for user: {}", request.getUserId());
 
-        // TODO: Implement actual authentication logic
-        // 1. Query users table: SELECT * FROM users WHERE user_id = ?
-        // 2. Verify BCrypt password: BCrypt.checkpw(password, stored_hash)
-        // 3. Check account status (is_active, locked_until)
-        // 4. Generate JWT token with user info
-        // 5. Create session in Redis
-        // 6. Update last_login timestamp
-        // 7. Log audit trail
-        // 8. Return token + user info
-
-        // Mock response for demonstration
-        LoginResponse response = new LoginResponse(
-            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.mock-token",
-            new UserInfo(
+        AuthService.AuthResult result = authService.authenticate(
                 request.getUserId(),
-                "John",
-                "Doe",
-                "U",
-                "uuid-session-id"
-            )
+                request.getPassword()
+        );
+
+        LoginResponse response = new LoginResponse(
+                result.accessToken(),
+                result.refreshToken(),
+                new UserInfo(
+                        result.user().getUserId(),
+                        result.user().getFirstName(),
+                        result.user().getLastName(),
+                        result.user().getUserType(),
+                        result.user().getCustomerId(),
+                        result.sessionId()
+                )
         );
 
         log.info("Login successful for user: {}", request.getUserId());
@@ -110,19 +109,16 @@ public class AuthController {
     /**
      * Logout endpoint
      *
-     * @param token JWT token
+     * @param token JWT token from Authorization header
      * @return Success message
      */
     @PostMapping("/logout")
     @Operation(summary = "User logout", description = "Invalidate JWT token and clear session")
-    public ResponseEntity<MessageResponse> logout(@RequestHeader("Authorization") String token) {
+    public ResponseEntity<MessageResponse> logout(
+            @Parameter(hidden = true) @RequestHeader("Authorization") String token) {
         log.info("Logout request received");
 
-        // TODO: Implement logout logic
-        // 1. Extract JWT token from Authorization header
-        // 2. Invalidate token (add to Redis blacklist)
-        // 3. Delete session from Redis
-        // 4. Log audit trail
+        authService.logout(token);
 
         return ResponseEntity.ok(new MessageResponse("Logout successful"));
     }
@@ -130,22 +126,21 @@ public class AuthController {
     /**
      * Token validation endpoint
      *
-     * @param token JWT token
+     * @param token JWT token from Authorization header
      * @return Token validation result
      */
     @GetMapping("/validate")
     @Operation(summary = "Validate token", description = "Check if JWT token is valid and not expired")
-    public ResponseEntity<TokenValidationResponse> validateToken(@RequestHeader("Authorization") String token) {
+    public ResponseEntity<TokenValidationResponse> validateToken(
+            @Parameter(hidden = true) @RequestHeader("Authorization") String token) {
         log.debug("Token validation request received");
 
-        // TODO: Implement token validation
-        // 1. Parse JWT token
-        // 2. Verify signature
-        // 3. Check expiration
-        // 4. Check Redis session
-        // 5. Check if token is blacklisted
+        AuthService.TokenValidationResult result = authService.validateToken(token);
 
-        return ResponseEntity.ok(new TokenValidationResponse(true, null));
+        return ResponseEntity.ok(new TokenValidationResponse(
+                result.valid(),
+                result.valid() ? "Token is valid" : "Token is invalid or expired"
+        ));
     }
 
     /**
@@ -156,16 +151,13 @@ public class AuthController {
      */
     @PostMapping("/refresh")
     @Operation(summary = "Refresh token", description = "Generate new access token using refresh token")
-    public ResponseEntity<RefreshTokenResponse> refreshToken(@Valid @RequestBody RefreshTokenRequest request) {
+    public ResponseEntity<RefreshTokenResponse> refreshToken(
+            @Valid @RequestBody RefreshTokenRequest request) {
         log.info("Token refresh request received");
 
-        // TODO: Implement token refresh logic
-        // 1. Validate refresh token
-        // 2. Get user from token
-        // 3. Generate new access token
-        // 4. Return new token
+        AuthService.RefreshResult result = authService.refreshToken(request.getRefreshToken());
 
-        return ResponseEntity.ok(new RefreshTokenResponse("new-access-token"));
+        return ResponseEntity.ok(new RefreshTokenResponse(result.accessToken()));
     }
 }
 
@@ -199,7 +191,8 @@ class LoginRequest {
 @AllArgsConstructor
 @NoArgsConstructor
 class LoginResponse {
-    private String token;
+    private String accessToken;
+    private String refreshToken;
     private UserInfo user;
 }
 
@@ -215,6 +208,7 @@ class UserInfo {
     private String firstName;     // SEC-USR-FNAME
     private String lastName;      // SEC-USR-LNAME
     private String userType;      // SEC-USR-TYPE (A=Admin, U=User)
+    private Integer customerId;   // Linked customer ID (null for admins)
     private String sessionId;
 }
 

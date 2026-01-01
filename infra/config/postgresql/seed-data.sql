@@ -10,16 +10,16 @@
 -- USERS (from USRSEC VSAM)
 -- ============================================================================
 -- Password: "PASSWORD" hashed with BCrypt (rounds=10)
--- BCrypt hash: $2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy
+-- BCrypt hash: $2b$10$OHvubn0WB3jzCdC0AlFubOIzH/v/l01gGk31V8WorCjjLudnPltXe
 
-INSERT INTO users (user_id, first_name, last_name, password_hash, user_type, is_active) VALUES
-('USER0001', 'John', 'Doe', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'U', TRUE),
-('USER0002', 'Jane', 'Smith', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'U', TRUE),
-('USER0003', 'Bob', 'Johnson', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'U', TRUE),
-('USER0004', 'Alice', 'Williams', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'U', TRUE),
-('USER0005', 'Charlie', 'Brown', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'U', TRUE),
-('ADMIN001', 'Admin', 'User', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'A', TRUE),
-('ADMIN002', 'Super', 'Admin', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'A', TRUE)
+INSERT INTO users (user_id, first_name, last_name, password_hash, user_type, customer_id, is_active) VALUES
+('USER0001', 'John', 'Doe', '$2b$10$OHvubn0WB3jzCdC0AlFubOIzH/v/l01gGk31V8WorCjjLudnPltXe', 'U', 123456789, TRUE),
+('USER0002', 'Jane', 'Smith', '$2b$10$OHvubn0WB3jzCdC0AlFubOIzH/v/l01gGk31V8WorCjjLudnPltXe', 'U', 123456790, TRUE),
+('USER0003', 'Bob', 'Johnson', '$2b$10$OHvubn0WB3jzCdC0AlFubOIzH/v/l01gGk31V8WorCjjLudnPltXe', 'U', 123456791, TRUE),
+('USER0004', 'Alice', 'Williams', '$2b$10$OHvubn0WB3jzCdC0AlFubOIzH/v/l01gGk31V8WorCjjLudnPltXe', 'U', 123456792, TRUE),
+('USER0005', 'Charlie', 'Brown', '$2b$10$OHvubn0WB3jzCdC0AlFubOIzH/v/l01gGk31V8WorCjjLudnPltXe', 'U', 123456793, TRUE),
+('ADMIN001', 'Admin', 'User', '$2b$10$OHvubn0WB3jzCdC0AlFubOIzH/v/l01gGk31V8WorCjjLudnPltXe', 'A', NULL, TRUE),
+('ADMIN002', 'Super', 'Admin', '$2b$10$OHvubn0WB3jzCdC0AlFubOIzH/v/l01gGk31V8WorCjjLudnPltXe', 'A', NULL, TRUE)
 ON CONFLICT (user_id) DO NOTHING;
 
 -- ============================================================================
@@ -160,6 +160,42 @@ INSERT INTO transactions (account_id, transaction_type, transaction_category, tr
 ON CONFLICT DO NOTHING;
 
 -- ============================================================================
+-- PARTNERS (for API integration testing)
+-- ============================================================================
+
+INSERT INTO partners (partner_name, partner_type, contact_email, contact_phone, webhook_url,
+                      allowed_scopes, rate_limit_per_minute, daily_quota, is_active) VALUES
+('Fintech ABC', 'FINTECH', 'api@fintechabc.com', '+1-555-0001',
+ 'https://webhook.fintechabc.com/carddemo',
+ ARRAY['accounts:read', 'transactions:read'], 60, 10000, TRUE),
+('PayPro Merchants', 'MERCHANT', 'integration@paypro.com', '+1-555-0002',
+ NULL,
+ ARRAY['transactions:read'], 30, 5000, TRUE),
+('Global Payments Inc', 'PROCESSOR', 'partners@globalpay.com', '+1-555-0003',
+ 'https://api.globalpay.com/webhooks/carddemo',
+ ARRAY['accounts:read', 'transactions:read', 'cards:read'], 120, 50000, TRUE),
+('Regional Bank Corp', 'BANK', 'api-team@regionalbank.com', '+1-555-0004',
+ NULL,
+ ARRAY['accounts:read', 'transactions:read'], 100, 25000, TRUE)
+ON CONFLICT DO NOTHING;
+
+-- ============================================================================
+-- PARTNER API KEYS (Test keys - DO NOT USE IN PRODUCTION)
+-- ============================================================================
+-- Test API Key for Fintech ABC: pk_test_abc123xyz456def789ghi012jkl345mno678
+-- SHA-256 Hash: 8b2e97c2a0dcc9c5f4b8a7e6d5c4b3a2918f7e6d5c4b3a2918f7e6d5c4b3a291
+
+INSERT INTO partner_api_keys (partner_id, api_key_hash, key_prefix, key_suffix,
+                              description, scopes, expires_at, is_active) VALUES
+(1, '8b2e97c2a0dcc9c5f4b8a7e6d5c4b3a2918f7e6d5c4b3a2918f7e6d5c4b3a291',
+ 'pk_test_', 'no678', 'Test API Key for development', NULL, NULL, TRUE),
+(2, 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2',
+ 'pk_live_', 'klm321', 'Production API Key', ARRAY['transactions:read'], NULL, TRUE),
+(3, 'f1e2d3c4b5a6f7e8d9c0b1a2f3e4d5c6b7a8f9e0d1c2b3a4f5e6d7c8b9a0f1e2',
+ 'pk_live_', 'xyz999', 'Full access key', NULL, NULL, TRUE)
+ON CONFLICT DO NOTHING;
+
+-- ============================================================================
 -- AUDIT LOG (Initial system setup entries)
 -- ============================================================================
 
@@ -182,6 +218,8 @@ ANALYZE accounts;
 ANALYZE credit_cards;
 ANALYZE transactions;
 ANALYZE audit_log;
+ANALYZE partners;
+ANALYZE partner_api_keys;
 
 -- Display summary
 SELECT 'Data seeding completed!' AS status;
@@ -193,7 +231,11 @@ SELECT 'Accounts: ' || COUNT(*) FROM accounts
 UNION ALL
 SELECT 'Credit Cards: ' || COUNT(*) FROM credit_cards
 UNION ALL
-SELECT 'Transactions: ' || COUNT(*) FROM transactions;
+SELECT 'Transactions: ' || COUNT(*) FROM transactions
+UNION ALL
+SELECT 'Partners: ' || COUNT(*) FROM partners
+UNION ALL
+SELECT 'Partner API Keys: ' || COUNT(*) FROM partner_api_keys;
 
 -- ============================================================================
 -- TEST USER CREDENTIALS
@@ -216,4 +258,36 @@ Test Accounts:
 - 1000000001 (John Doe, Balance: $1,250.50)
 - 1000000003 (Jane Smith, Balance: $5,240.75)
 - 1000000005 (Alice Williams, Balance: $12,500.00 - Premium)
+
+============================================================================
+PARTNER API TEST CREDENTIALS
+============================================================================
+Partner 1: Fintech ABC
+- Partner ID: 1
+- Type: FINTECH
+- Rate Limit: 60 requests/minute
+- Daily Quota: 10,000 requests
+- Scopes: accounts:read, transactions:read
+- Test API Key: (Generate via POST /api/v1/partners/1/keys)
+
+Partner 2: PayPro Merchants
+- Partner ID: 2
+- Type: MERCHANT
+- Rate Limit: 30 requests/minute
+- Scopes: transactions:read
+
+Partner 3: Global Payments Inc
+- Partner ID: 3
+- Type: PROCESSOR
+- Rate Limit: 120 requests/minute
+- Daily Quota: 50,000 requests
+- Scopes: accounts:read, transactions:read, cards:read
+
+API Endpoints:
+- Partner Management: http://localhost:8085/api/v1/partners
+- Partner API: http://localhost:8085/partner/v1/*
+- Documentation: http://localhost:8085/swagger-ui.html
+
+Example API Key Usage:
+curl -H "X-API-Key: pk_live_your_api_key_here" http://localhost:8085/partner/v1/accounts/1000000001
 */

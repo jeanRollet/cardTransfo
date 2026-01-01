@@ -21,7 +21,7 @@ spring:
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
-      ddl-auto: validate
+      ddl-auto: none
     show-sql: false
     properties:
       hibernate:
@@ -67,10 +67,13 @@ jwt:
   issuer: carddemo-auth-service
   audience: carddemo-app
 
+# Auth Service Configuration
+auth:
+  max-login-attempts: 5
+  lock-duration-seconds: 900  # 15 minutes in seconds
+
 # Security Configuration
 security:
-  max-login-attempts: 5
-  account-lock-duration: 900  # 15 minutes in seconds
   password:
     min-length: 8
     require-uppercase: false
@@ -97,11 +100,13 @@ management:
 # OpenAPI / Swagger
 springdoc:
   api-docs:
-    path: /api-docs
+    path: /v3/api-docs
+    enabled: true
   swagger-ui:
     path: /swagger-ui.html
     tags-sorter: alpha
     operations-sorter: alpha
+    enabled: true
   info:
     title: CardDemo Authentication Service API
     description: |

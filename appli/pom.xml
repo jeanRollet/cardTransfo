@@ -39,7 +39,10 @@
     <modules>
         <module>shared</module>
         <module>auth-service</module>
+        <module>card-service</module>
         <module>account-service</module>
+        <module>transaction-service</module>
+        <module>partner-service</module>
     </modules>
 
     <dependencyManagement>

@@ -7,6 +7,8 @@
   volumes:
     postgres-data:
     redis-data:
+    kafka-data:
+    zookeeper-data:
 
   services:
     postgresql:
@@ -18,10 +20,17 @@
         POSTGRES_PASSWORD: carddemo123
       volumes:
         - postgres-data:/var/lib/postgresql/data
+        - ../config/postgresql/init-db.sql:/docker-entrypoint-initdb.d/01-init-db.sql:ro
+        - ../config/postgresql/seed-data.sql:/docker-entrypoint-initdb.d/02-seed-data.sql:ro
       ports:
         - "5432:5432"
       networks:
         - carddemo-net
+      healthcheck:
+        test: ["CMD-SHELL", "pg_isready -U carddemo -d carddemo"]
+        interval: 10s
+        timeout: 5s
+        retries: 5
       restart: unless-stopped
 
     redis:
@@ -37,12 +46,142 @@
       restart: unless-stopped
 
     frontend:
-      image: nginx:alpine
+      build:
+        context: ../../frontend
+        dockerfile: Dockerfile
       container_name: carddemo-frontend
       ports:
         - "3000:80"
       networks:
         - carddemo-net
-      volumes:
-        - ./frontend:/usr/share/nginx/html:ro
+      depends_on:
+        - auth-service
+        - card-service
+        - account-service
+        - transaction-service
+      restart: unless-stopped
+
+    auth-service:
+      build:
+        context: ../../appli
+        dockerfile: auth-service/Dockerfile
+      container_name: carddemo-auth
+      environment:
+        SPRING_PROFILES_ACTIVE: docker
+        JWT_SECRET: carddemo-secret-key-change-in-production-minimum-256-bits
+      ports:
+        - "8081:8081"
+      networks:
+        - carddemo-net
+      depends_on:
+        postgresql:
+          condition: service_healthy
+        redis:
+          condition: service_started
+      healthcheck:
+        test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8081/actuator/health"]
+        interval: 30s
+        timeout: 10s
+        start_period: 60s
+        retries: 3
+      restart: unless-stopped
+
+    card-service:
+      build:
+        context: ../../appli
+        dockerfile: card-service/Dockerfile
+      container_name: carddemo-card
+      environment:
+        SPRING_PROFILES_ACTIVE: docker
+        JWT_SECRET: carddemo-secret-key-change-in-production-minimum-256-bits
+      ports:
+        - "8082:8082"
+      networks:
+        - carddemo-net
+      depends_on:
+        postgresql:
+          condition: service_healthy
+      healthcheck:
+        test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8082/actuator/health"]
+        interval: 30s
+        timeout: 10s
+        start_period: 60s
+        retries: 3
+      restart: unless-stopped
+
+    account-service:
+      build:
+        context: ../../appli
+        dockerfile: account-service/Dockerfile
+      container_name: carddemo-account
+      environment:
+        SPRING_PROFILES_ACTIVE: docker
+        JWT_SECRET: carddemo-secret-key-change-in-production-minimum-256-bits
+      ports:
+        - "8083:8083"
+      networks:
+        - carddemo-net
+      depends_on:
+        postgresql:
+          condition: service_healthy
+      healthcheck:
+        test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8083/actuator/health"]
+        interval: 30s
+        timeout: 10s
+        start_period: 60s
+        retries: 3
+      restart: unless-stopped
+
+    transaction-service:
+      build:
+        context: ../../appli
+        dockerfile: transaction-service/Dockerfile
+      container_name: carddemo-transaction
+      environment:
+        SPRING_PROFILES_ACTIVE: docker
+        JWT_SECRET: carddemo-secret-key-change-in-production-minimum-256-bits
+      ports:
+        - "8084:8084"
+      networks:
+        - carddemo-net
+      depends_on:
+        postgresql:
+          condition: service_healthy
+      healthcheck:
+        test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8084/actuator/health"]
+        interval: 30s
+        timeout: 10s
+        start_period: 60s
+        retries: 3
+      restart: unless-stopped
+
+    partner-service:
+      build:
+        context: ../../appli
+        dockerfile: partner-service/Dockerfile
+      container_name: carddemo-partner
+      environment:
+        SPRING_PROFILES_ACTIVE: docker
+        SPRING_DATA_REDIS_PASSWORD: carddemo123
+      ports:
+        - "8085:8085"
+      networks:
+        - carddemo-net
+      depends_on:
+        postgresql:
+          condition: service_healthy
+        redis:
+          condition: service_started
+        account-service:
+          condition: service_healthy
+        card-service:
+          condition: service_healthy
+        transaction-service:
+          condition: service_healthy
+      healthcheck:
+        test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8085/actuator/health"]
+        interval: 30s
+        timeout: 10s
+        start_period: 60s
+        retries: 3
       restart: unless-stopped
