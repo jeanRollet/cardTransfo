@@ -11,12 +11,12 @@
         <version>1.0.0</version>
     </parent>
 
-    <artifactId>account-service</artifactId>
+    <artifactId>notification-service</artifactId>
     <version>1.0.0</version>
     <packaging>jar</packaging>
 
-    <name>CardDemo - Account Management Service</name>
-    <description>Account management service (replaces COACTVWC CICS transaction)</description>
+    <name>CardDemo - Notification Service</name>
+    <description>Event-driven notification service with webhook delivery (replaces MQ Series consumer patterns)</description>
 
     <dependencies>
         <!-- Spring Boot Starters -->
@@ -36,6 +36,16 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webflux</artifactId>
+        </dependency>
+
+        <!-- Kafka -->
+        <dependency>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka</artifactId>
+        </dependency>
 
         <!-- Database -->
         <dependency>
@@ -44,18 +54,11 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- JWT for token validation -->
+        <!-- Shared Events -->
         <dependency>
-            <groupId>io.jsonwebtoken</groupId>
-            <artifactId>jjwt-api</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.jsonwebtoken</groupId>
-            <artifactId>jjwt-impl</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.jsonwebtoken</groupId>
-            <artifactId>jjwt-jackson</artifactId>
+            <groupId>com.carddemo</groupId>
+            <artifactId>shared</artifactId>
+            <version>1.0.0</version>
         </dependency>
 
         <!-- OpenAPI / Swagger -->
@@ -77,23 +80,15 @@
             <artifactId>micrometer-registry-prometheus</artifactId>
         </dependency>
 
-        <!-- Kafka -->
-        <dependency>
-            <groupId>org.springframework.kafka</groupId>
-            <artifactId>spring-kafka</artifactId>
-        </dependency>
-
-        <!-- Shared Events -->
-        <dependency>
-            <groupId>com.carddemo</groupId>
-            <artifactId>shared</artifactId>
-            <version>1.0.0</version>
-        </dependency>
-
         <!-- Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka-test</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

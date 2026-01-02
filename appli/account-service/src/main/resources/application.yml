@@ -6,6 +6,15 @@ server:
 spring:
   application:
     name: account-service
+
+  kafka:
+    bootstrap-servers: localhost:29092
+    producer:
+      acks: all
+      retries: 3
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
   datasource:
     url: jdbc:postgresql://localhost:5432/carddemo
     username: carddemo
@@ -60,6 +69,9 @@ spring:
       on-profile: docker
   datasource:
     url: jdbc:postgresql://postgresql:5432/carddemo
+
+  kafka:
+    bootstrap-servers: kafka:9092
 
 logging:
   level:

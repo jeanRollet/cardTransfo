@@ -9,6 +9,7 @@
     redis-data:
     kafka-data:
     zookeeper-data:
+    zookeeper-log:
 
   services:
     postgresql:
@@ -101,6 +102,8 @@
       depends_on:
         postgresql:
           condition: service_healthy
+        kafka:
+          condition: service_healthy
       healthcheck:
         test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8082/actuator/health"]
         interval: 30s
@@ -124,6 +127,8 @@
       depends_on:
         postgresql:
           condition: service_healthy
+        kafka:
+          condition: service_healthy
       healthcheck:
         test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8083/actuator/health"]
         interval: 30s
@@ -146,6 +151,8 @@
         - carddemo-net
       depends_on:
         postgresql:
+          condition: service_healthy
+        kafka:
           condition: service_healthy
       healthcheck:
         test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8084/actuator/health"]
@@ -180,6 +187,102 @@
           condition: service_healthy
       healthcheck:
         test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8085/actuator/health"]
+        interval: 30s
+        timeout: 10s
+        start_period: 60s
+        retries: 3
+      restart: unless-stopped
+
+    # ============================================================================
+    # Kafka Infrastructure (replaces MQ Series from mainframe)
+    # ============================================================================
+
+    zookeeper:
+      image: confluentinc/cp-zookeeper:7.5.0
+      container_name: carddemo-zookeeper
+      environment:
+        ZOOKEEPER_CLIENT_PORT: 2181
+        ZOOKEEPER_TICK_TIME: 2000
+      volumes:
+        - zookeeper-data:/var/lib/zookeeper/data
+        - zookeeper-log:/var/lib/zookeeper/log
+      networks:
+        - carddemo-net
+      healthcheck:
+        test: ["CMD", "nc", "-z", "localhost", "2181"]
+        interval: 10s
+        timeout: 5s
+        retries: 5
+      restart: unless-stopped
+
+    kafka:
+      image: confluentinc/cp-kafka:7.5.0
+      container_name: carddemo-kafka
+      depends_on:
+        zookeeper:
+          condition: service_healthy
+      environment:
+        KAFKA_BROKER_ID: 1
+        KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+        KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+        KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+        KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+        KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+        KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+        KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+        KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      volumes:
+        - kafka-data:/var/lib/kafka/data
+      ports:
+        - "29092:29092"
+      networks:
+        - carddemo-net
+      healthcheck:
+        test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+        interval: 10s
+        timeout: 10s
+        retries: 10
+        start_period: 30s
+      restart: unless-stopped
+
+    kafka-init:
+      image: confluentinc/cp-kafka:7.5.0
+      container_name: carddemo-kafka-init
+      depends_on:
+        kafka:
+          condition: service_healthy
+      networks:
+        - carddemo-net
+      command: >
+        bash -c "
+          echo 'Creating Kafka topics...'
+          kafka-topics --create --if-not-exists --topic carddemo.transactions --bootstrap-server kafka:9092 --partitions 8 --replication-factor 1 --config retention.ms=604800000
+          kafka-topics --create --if-not-exists --topic carddemo.cards --bootstrap-server kafka:9092 --partitions 4 --replication-factor 1 --config retention.ms=604800000
+          kafka-topics --create --if-not-exists --topic carddemo.accounts --bootstrap-server kafka:9092 --partitions 4 --replication-factor 1 --config retention.ms=604800000
+          kafka-topics --create --if-not-exists --topic carddemo.dlq --bootstrap-server kafka:9092 --partitions 4 --replication-factor 1 --config retention.ms=2592000000
+          echo 'Topics created successfully:'
+          kafka-topics --list --bootstrap-server kafka:9092
+        "
+      restart: "no"
+
+    notification-service:
+      build:
+        context: ../../appli
+        dockerfile: notification-service/Dockerfile
+      container_name: carddemo-notification
+      environment:
+        SPRING_PROFILES_ACTIVE: docker
+      ports:
+        - "8086:8086"
+      networks:
+        - carddemo-net
+      depends_on:
+        postgresql:
+          condition: service_healthy
+        kafka:
+          condition: service_healthy
+      healthcheck:
+        test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8086/actuator/health"]
         interval: 30s
         timeout: 10s
         start_period: 60s

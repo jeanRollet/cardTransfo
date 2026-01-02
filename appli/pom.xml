@@ -43,6 +43,7 @@
         <module>account-service</module>
         <module>transaction-service</module>
         <module>partner-service</module>
+        <module>notification-service</module>
     </modules>
 
     <dependencyManagement>
@@ -102,6 +103,12 @@
                 <artifactId>lombok</artifactId>
                 <version>${lombok.version}</version>
                 <scope>provided</scope>
+            </dependency>
+
+            <!-- Kafka -->
+            <dependency>
+                <groupId>org.springframework.kafka</groupId>
+                <artifactId>spring-kafka</artifactId>
             </dependency>
         </dependencies>
     </dependencyManagement>

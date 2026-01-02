@@ -468,6 +468,106 @@ $$ LANGUAGE plpgsql;
 COMMENT ON FUNCTION validate_user_login IS 'Validates user login credentials (replaces COSGN00C COBOL logic)';
 
 -- ============================================================================
+-- OUTBOX TABLES (Event Sourcing Pattern)
+-- Replaces: CICS SYNCPOINT + MQ PUT atomicity (Unit of Work)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS transaction_outbox (
+    id BIGSERIAL PRIMARY KEY,
+    event_id UUID NOT NULL UNIQUE DEFAULT uuid_generate_v4(),
+    event_type VARCHAR(50) NOT NULL,
+    aggregate_id VARCHAR(50) NOT NULL,
+    payload JSONB NOT NULL,
+    status VARCHAR(20) DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'PUBLISHED', 'FAILED')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    published_at TIMESTAMP
+);
+
+COMMENT ON TABLE transaction_outbox IS 'Outbox table for transaction events (replaces MQ Series atomic messaging)';
+COMMENT ON COLUMN transaction_outbox.aggregate_id IS 'Account ID for this transaction';
+COMMENT ON COLUMN transaction_outbox.status IS 'PENDING=awaiting publish, PUBLISHED=sent to Kafka, FAILED=error';
+
+CREATE INDEX idx_transaction_outbox_status ON transaction_outbox(status);
+CREATE INDEX idx_transaction_outbox_created ON transaction_outbox(created_at);
+
+CREATE TABLE IF NOT EXISTS card_outbox (
+    id BIGSERIAL PRIMARY KEY,
+    event_id UUID NOT NULL UNIQUE DEFAULT uuid_generate_v4(),
+    event_type VARCHAR(50) NOT NULL,
+    aggregate_id VARCHAR(50) NOT NULL,
+    payload JSONB NOT NULL,
+    status VARCHAR(20) DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'PUBLISHED', 'FAILED')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    published_at TIMESTAMP
+);
+
+COMMENT ON TABLE card_outbox IS 'Outbox table for card events';
+CREATE INDEX idx_card_outbox_status ON card_outbox(status);
+CREATE INDEX idx_card_outbox_created ON card_outbox(created_at);
+
+CREATE TABLE IF NOT EXISTS account_outbox (
+    id BIGSERIAL PRIMARY KEY,
+    event_id UUID NOT NULL UNIQUE DEFAULT uuid_generate_v4(),
+    event_type VARCHAR(50) NOT NULL,
+    aggregate_id VARCHAR(50) NOT NULL,
+    payload JSONB NOT NULL,
+    status VARCHAR(20) DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'PUBLISHED', 'FAILED')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    published_at TIMESTAMP
+);
+
+COMMENT ON TABLE account_outbox IS 'Outbox table for account events';
+CREATE INDEX idx_account_outbox_status ON account_outbox(status);
+CREATE INDEX idx_account_outbox_created ON account_outbox(created_at);
+
+-- ============================================================================
+-- WEBHOOK TABLES (Partner Notification System)
+-- Replaces: CICS Web Services callback patterns
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS webhook_subscriptions (
+    subscription_id SERIAL PRIMARY KEY,
+    partner_id INTEGER NOT NULL REFERENCES partners(partner_id) ON DELETE CASCADE,
+    event_type VARCHAR(50) NOT NULL,
+    scope_required VARCHAR(50) NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(partner_id, event_type)
+);
+
+COMMENT ON TABLE webhook_subscriptions IS 'Partner webhook event subscriptions';
+COMMENT ON COLUMN webhook_subscriptions.event_type IS 'Event type to subscribe to (e.g., TransactionCreated, CardStatusChanged)';
+COMMENT ON COLUMN webhook_subscriptions.scope_required IS 'Required OAuth scope to receive this event';
+
+CREATE INDEX idx_webhook_subs_partner ON webhook_subscriptions(partner_id);
+CREATE INDEX idx_webhook_subs_event ON webhook_subscriptions(event_type);
+CREATE INDEX idx_webhook_subs_active ON webhook_subscriptions(is_active);
+
+CREATE TABLE IF NOT EXISTS webhook_deliveries (
+    delivery_id BIGSERIAL PRIMARY KEY,
+    event_id UUID NOT NULL,
+    partner_id INTEGER NOT NULL REFERENCES partners(partner_id),
+    webhook_url VARCHAR(255) NOT NULL,
+    payload JSONB NOT NULL,
+    status VARCHAR(20) DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'SUCCESS', 'FAILED', 'DEAD_LETTER')),
+    attempt_count INTEGER DEFAULT 0,
+    next_attempt_at TIMESTAMP,
+    last_error VARCHAR(500),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMP
+);
+
+COMMENT ON TABLE webhook_deliveries IS 'Webhook delivery tracking with retry logic';
+COMMENT ON COLUMN webhook_deliveries.status IS 'PENDING, SUCCESS, FAILED (retrying), DEAD_LETTER (max retries exceeded)';
+COMMENT ON COLUMN webhook_deliveries.attempt_count IS 'Number of delivery attempts (max 5)';
+COMMENT ON COLUMN webhook_deliveries.next_attempt_at IS 'When to retry (exponential backoff: 1, 5, 15, 60, 240 min)';
+
+CREATE INDEX idx_webhook_del_status ON webhook_deliveries(status);
+CREATE INDEX idx_webhook_del_partner ON webhook_deliveries(partner_id);
+CREATE INDEX idx_webhook_del_retry ON webhook_deliveries(status, next_attempt_at) WHERE status IN ('PENDING', 'FAILED');
+CREATE INDEX idx_webhook_del_event ON webhook_deliveries(event_id);
+
+-- ============================================================================
 -- GRANT PERMISSIONS
 -- ============================================================================
 
