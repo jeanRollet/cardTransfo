@@ -33,11 +33,18 @@
         timeout: 5s
         retries: 5
       restart: unless-stopped
+      deploy:
+        resources:
+          limits:
+            cpus: '0.5'
+            memory: 256M
+          reservations:
+            memory: 128M
 
     redis:
       image: redis:7-alpine
       container_name: carddemo-redis
-      command: redis-server --requirepass carddemo123
+      command: redis-server --requirepass carddemo123 --maxmemory 50mb --maxmemory-policy allkeys-lru
       volumes:
         - redis-data:/data
       ports:
@@ -45,6 +52,13 @@
       networks:
         - carddemo-net
       restart: unless-stopped
+      deploy:
+        resources:
+          limits:
+            cpus: '0.25'
+            memory: 64M
+          reservations:
+            memory: 32M
 
     frontend:
       build:
@@ -61,6 +75,13 @@
         - account-service
         - transaction-service
       restart: unless-stopped
+      deploy:
+        resources:
+          limits:
+            cpus: '0.25'
+            memory: 64M
+          reservations:
+            memory: 32M
 
     auth-service:
       build:
@@ -70,6 +91,7 @@
       environment:
         SPRING_PROFILES_ACTIVE: docker
         JWT_SECRET: carddemo-secret-key-change-in-production-minimum-256-bits
+        JAVA_OPTS: "-Xms128m -Xmx256m -XX:+UseG1GC -XX:MaxGCPauseMillis=100"
       ports:
         - "8081:8081"
       networks:
@@ -86,6 +108,13 @@
         start_period: 60s
         retries: 3
       restart: unless-stopped
+      deploy:
+        resources:
+          limits:
+            cpus: '0.5'
+            memory: 384M
+          reservations:
+            memory: 256M
 
     card-service:
       build:
@@ -95,6 +124,7 @@
       environment:
         SPRING_PROFILES_ACTIVE: docker
         JWT_SECRET: carddemo-secret-key-change-in-production-minimum-256-bits
+        JAVA_OPTS: "-Xms128m -Xmx256m -XX:+UseG1GC -XX:MaxGCPauseMillis=100"
       ports:
         - "8082:8082"
       networks:
@@ -111,6 +141,13 @@
         start_period: 60s
         retries: 3
       restart: unless-stopped
+      deploy:
+        resources:
+          limits:
+            cpus: '0.5'
+            memory: 384M
+          reservations:
+            memory: 256M
 
     account-service:
       build:
@@ -120,6 +157,7 @@
       environment:
         SPRING_PROFILES_ACTIVE: docker
         JWT_SECRET: carddemo-secret-key-change-in-production-minimum-256-bits
+        JAVA_OPTS: "-Xms128m -Xmx256m -XX:+UseG1GC -XX:MaxGCPauseMillis=100"
       ports:
         - "8083:8083"
       networks:
@@ -136,6 +174,13 @@
         start_period: 60s
         retries: 3
       restart: unless-stopped
+      deploy:
+        resources:
+          limits:
+            cpus: '0.5'
+            memory: 384M
+          reservations:
+            memory: 256M
 
     transaction-service:
       build:
@@ -145,6 +190,7 @@
       environment:
         SPRING_PROFILES_ACTIVE: docker
         JWT_SECRET: carddemo-secret-key-change-in-production-minimum-256-bits
+        JAVA_OPTS: "-Xms128m -Xmx256m -XX:+UseG1GC -XX:MaxGCPauseMillis=100"
       ports:
         - "8084:8084"
       networks:
@@ -161,6 +207,13 @@
         start_period: 60s
         retries: 3
       restart: unless-stopped
+      deploy:
+        resources:
+          limits:
+            cpus: '0.5'
+            memory: 384M
+          reservations:
+            memory: 256M
 
     partner-service:
       build:
@@ -170,6 +223,7 @@
       environment:
         SPRING_PROFILES_ACTIVE: docker
         SPRING_DATA_REDIS_PASSWORD: carddemo123
+        JAVA_OPTS: "-Xms128m -Xmx256m -XX:+UseG1GC -XX:MaxGCPauseMillis=100"
       ports:
         - "8085:8085"
       networks:
@@ -192,6 +246,13 @@
         start_period: 60s
         retries: 3
       restart: unless-stopped
+      deploy:
+        resources:
+          limits:
+            cpus: '0.5'
+            memory: 384M
+          reservations:
+            memory: 256M
 
     # ============================================================================
     # Kafka Infrastructure (replaces MQ Series from mainframe)
@@ -203,6 +264,7 @@
       environment:
         ZOOKEEPER_CLIENT_PORT: 2181
         ZOOKEEPER_TICK_TIME: 2000
+        KAFKA_HEAP_OPTS: "-Xms64m -Xmx128m"
       volumes:
         - zookeeper-data:/var/lib/zookeeper/data
         - zookeeper-log:/var/lib/zookeeper/log
@@ -214,6 +276,13 @@
         timeout: 5s
         retries: 5
       restart: unless-stopped
+      deploy:
+        resources:
+          limits:
+            cpus: '0.25'
+            memory: 256M
+          reservations:
+            memory: 128M
 
     kafka:
       image: confluentinc/cp-kafka:7.5.0
@@ -231,6 +300,7 @@
         KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
         KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
         KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+        KAFKA_HEAP_OPTS: "-Xms256m -Xmx384m"
       volumes:
         - kafka-data:/var/lib/kafka/data
       ports:
@@ -244,6 +314,13 @@
         retries: 10
         start_period: 30s
       restart: unless-stopped
+      deploy:
+        resources:
+          limits:
+            cpus: '0.5'
+            memory: 512M
+          reservations:
+            memory: 256M
 
     kafka-init:
       image: confluentinc/cp-kafka:7.5.0
@@ -272,6 +349,7 @@
       container_name: carddemo-notification
       environment:
         SPRING_PROFILES_ACTIVE: docker
+        JAVA_OPTS: "-Xms128m -Xmx256m -XX:+UseG1GC -XX:MaxGCPauseMillis=100"
       ports:
         - "8086:8086"
       networks:
@@ -288,3 +366,10 @@
         start_period: 60s
         retries: 3
       restart: unless-stopped
+      deploy:
+        resources:
+          limits:
+            cpus: '0.5'
+            memory: 384M
+          reservations:
+            memory: 256M

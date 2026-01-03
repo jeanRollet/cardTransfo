@@ -10,6 +10,8 @@ COPY auth-service ./auth-service
 COPY account-service ./account-service
 COPY card-service ./card-service
 COPY transaction-service ./transaction-service
+COPY partner-service ./partner-service
+COPY notification-service ./notification-service
 
 # Install Maven
 RUN apk add --no-cache maven

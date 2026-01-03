@@ -3,7 +3,7 @@ FROM eclipse-temurin:21-jdk-alpine AS builder
 
 WORKDIR /app
 
-# Copy all project files (parent pom needs all modules referenced)
+# Copy all modules (parent pom needs all modules referenced)
 COPY pom.xml ./pom.xml
 COPY shared ./shared
 COPY auth-service ./auth-service
