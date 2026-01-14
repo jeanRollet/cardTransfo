@@ -1,5 +1,6 @@
 package com.carddemo.transaction.controller;
 
+import com.carddemo.transaction.dto.CreateTransactionRequest;
 import com.carddemo.transaction.dto.TransactionListResponse;
 import com.carddemo.transaction.dto.TransactionResponse;
 import com.carddemo.transaction.dto.TransactionSummaryResponse;
@@ -9,6 +10,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -16,6 +18,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -155,6 +158,24 @@ public class TransactionController {
     }
 
     /**
+     * Get transactions for a specific card
+     */
+    @GetMapping("/card/{cardNumber}")
+    @Operation(
+            summary = "List transactions for card",
+            description = "Returns all transactions made with a specific credit card"
+    )
+    public ResponseEntity<List<TransactionResponse>> getTransactionsByCard(
+            @Parameter(description = "Card number (16 digits)")
+            @PathVariable String cardNumber) {
+
+        log.info("GET /api/v1/transactions/card/****{}",
+                cardNumber.length() > 4 ? cardNumber.substring(cardNumber.length() - 4) : "****");
+        List<TransactionResponse> response = transactionService.getTransactionsByCard(cardNumber);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
      * Get transaction summary for an account (CORPT00C - Reports)
      */
     @GetMapping("/account/{accountId}/summary")
@@ -184,5 +205,27 @@ public class TransactionController {
         log.info("GET /api/v1/transactions/summary");
         TransactionSummaryResponse response = transactionService.getOverallSummary();
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Create a new transaction (COTRN02C - Transaction Add)
+     */
+    @PostMapping
+    @Operation(
+            summary = "Create transaction",
+            description = "Creates a new transaction. Replaces CICS COTRN02C transaction."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Transaction created successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid request data"),
+            @ApiResponse(responseCode = "404", description = "Account not found")
+    })
+    public ResponseEntity<TransactionResponse> createTransaction(
+            @Valid @RequestBody CreateTransactionRequest request) {
+
+        log.info("POST /api/v1/transactions - type: {}, amount: {}",
+                request.getTransactionType(), request.getAmount());
+        TransactionResponse response = transactionService.createTransaction(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 }

@@ -55,6 +55,13 @@ const cardService = {
   },
 
   async getCardDetails(cardNumber: string): Promise<CardResponse> {
+    // If 4 digits, use the by-last-four endpoint
+    if (cardNumber.length === 4) {
+      const response = await api.get<CardResponse>(`${API_URL}/by-last-four/${cardNumber}`, {
+        headers: getAuthHeader()
+      });
+      return response.data;
+    }
     const response = await api.get<CardResponse>(`${API_URL}/${cardNumber}`, {
       headers: getAuthHeader()
     });
@@ -62,8 +69,11 @@ const cardService = {
   },
 
   async updateCardStatus(cardNumber: string, status: string, reason?: string): Promise<CardResponse> {
+    const endpoint = cardNumber.length <= 4
+      ? `${API_URL}/by-last-four/${cardNumber}/status`
+      : `${API_URL}/${cardNumber}/status`;
     const response = await api.put<CardResponse>(
-      `${API_URL}/${cardNumber}/status`,
+      endpoint,
       { status, reason },
       { headers: getAuthHeader() }
     );
@@ -71,8 +81,11 @@ const cardService = {
   },
 
   async blockCard(cardNumber: string, reason: string): Promise<CardResponse> {
+    const endpoint = cardNumber.length <= 4
+      ? `${API_URL}/by-last-four/${cardNumber}/block`
+      : `${API_URL}/${cardNumber}/block`;
     const response = await api.post<CardResponse>(
-      `${API_URL}/${cardNumber}/block`,
+      endpoint,
       { reason },
       { headers: getAuthHeader() }
     );
@@ -98,6 +111,36 @@ const cardService = {
   async getCardsByCustomer(customerId: number): Promise<CardResponse[]> {
     const response = await api.get<CardResponse[]>(
       `${API_URL}/customer/${customerId}`,
+      { headers: getAuthHeader() }
+    );
+    return response.data;
+  },
+
+  async activateCard(cardNumber: string): Promise<CardResponse> {
+    const response = await api.put<CardResponse>(
+      `${API_URL}/${cardNumber}/status`,
+      { status: 'Y', reason: 'Card reactivated' },
+      { headers: getAuthHeader() }
+    );
+    return response.data;
+  },
+
+  async closeCard(cardNumber: string, reason: string): Promise<CardResponse> {
+    const response = await api.put<CardResponse>(
+      `${API_URL}/${cardNumber}/status`,
+      { status: 'N', reason },
+      { headers: getAuthHeader() }
+    );
+    return response.data;
+  },
+
+  async reissueCard(cardNumber: string): Promise<CardResponse> {
+    const endpoint = cardNumber.length <= 4
+      ? `${API_URL}/by-last-four/${cardNumber}/reissue`
+      : `${API_URL}/${cardNumber}/reissue`;
+    const response = await api.post<CardResponse>(
+      endpoint,
+      {},
       { headers: getAuthHeader() }
     );
     return response.data;

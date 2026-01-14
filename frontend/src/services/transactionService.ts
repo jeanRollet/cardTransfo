@@ -151,7 +151,37 @@ const transactionService = {
       { headers: getAuthHeader() }
     );
     return response.data;
+  },
+
+  async getTransactionsByCard(cardNumber: string): Promise<TransactionResponse[]> {
+    const response = await api.get<TransactionResponse[]>(
+      `${API_URL}/card/${cardNumber}`,
+      { headers: getAuthHeader() }
+    );
+    return response.data;
+  },
+
+  async createTransaction(request: CreateTransactionRequest): Promise<TransactionResponse> {
+    const response = await api.post<TransactionResponse>(
+      API_URL,
+      request,
+      { headers: getAuthHeader() }
+    );
+    return response.data;
   }
 };
+
+export interface CreateTransactionRequest {
+  accountId: number;
+  transactionType: string;
+  transactionCategory: string;
+  transactionSource?: string;
+  transactionDesc?: string;
+  amount: number;
+  merchantName?: string;
+  merchantCity?: string;
+  merchantZip?: string;
+  cardNumber?: string;
+}
 
 export default transactionService;

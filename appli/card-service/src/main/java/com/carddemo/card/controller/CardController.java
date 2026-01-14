@@ -217,6 +217,81 @@ public class CardController {
         return ResponseEntity.ok(response);
     }
 
+    /**
+     * Get card by last 4 digits (for frontend navigation)
+     */
+    @GetMapping("/by-last-four/{lastFour}")
+    @Operation(
+            summary = "Get card by last 4 digits",
+            description = "Returns card details by last 4 digits. Used for frontend navigation."
+    )
+    public ResponseEntity<CardResponse> getCardByLastFour(
+            @Parameter(description = "Last 4 digits of card number")
+            @PathVariable String lastFour) {
+
+        log.info("GET /api/v1/cards/by-last-four/{}", lastFour);
+        CardResponse response = cardService.getCardByLastFour(lastFour);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Update card status by last 4 digits
+     */
+    @PutMapping("/by-last-four/{lastFour}/status")
+    @Operation(
+            summary = "Update card status by last 4 digits",
+            description = "Updates card status using last 4 digits for identification"
+    )
+    public ResponseEntity<CardResponse> updateCardStatusByLastFour(
+            @Parameter(description = "Last 4 digits of card number")
+            @PathVariable String lastFour,
+            @Valid @RequestBody UpdateCardStatusRequest request) {
+
+        log.info("PUT /api/v1/cards/by-last-four/{}/status -> {}", lastFour, request.getStatus());
+        CardResponse response = cardService.updateCardStatusByLastFour(lastFour, request);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Block card by last 4 digits
+     */
+    @PostMapping("/by-last-four/{lastFour}/block")
+    @Operation(
+            summary = "Block card by last 4 digits",
+            description = "Emergency block using last 4 digits for identification"
+    )
+    public ResponseEntity<CardResponse> blockCardByLastFour(
+            @Parameter(description = "Last 4 digits of card number")
+            @PathVariable String lastFour,
+            @RequestBody(required = false) Map<String, String> body) {
+
+        String reason = body != null ? body.get("reason") : "Emergency block";
+        log.warn("POST /api/v1/cards/by-last-four/{}/block - reason: {}", lastFour, reason);
+        CardResponse response = cardService.blockCardByLastFour(lastFour, reason);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Reissue a card by last 4 digits
+     */
+    @PostMapping("/by-last-four/{lastFour}/reissue")
+    @Operation(
+            summary = "Request card reissue",
+            description = "Creates a request to reissue the card with a new number"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Reissue request submitted"),
+            @ApiResponse(responseCode = "404", description = "Card not found")
+    })
+    public ResponseEntity<CardResponse> reissueCardByLastFour(
+            @Parameter(description = "Last 4 digits of card number")
+            @PathVariable String lastFour) {
+
+        log.info("POST /api/v1/cards/by-last-four/{}/reissue", lastFour);
+        CardResponse response = cardService.reissueCardByLastFour(lastFour);
+        return ResponseEntity.ok(response);
+    }
+
     // Helper method to mask card number in logs
     private String maskCardNumber(String cardNumber) {
         if (cardNumber == null || cardNumber.length() < 4) {

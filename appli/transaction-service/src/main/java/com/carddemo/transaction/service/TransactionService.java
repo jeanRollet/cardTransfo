@@ -1,5 +1,6 @@
 package com.carddemo.transaction.service;
 
+import com.carddemo.transaction.dto.CreateTransactionRequest;
 import com.carddemo.transaction.dto.TransactionListResponse;
 import com.carddemo.transaction.dto.TransactionResponse;
 import com.carddemo.transaction.dto.TransactionSummaryResponse;
@@ -16,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -134,6 +136,27 @@ public class TransactionService {
         log.info("Searching transactions with term: {}", term);
 
         return transactionRepository.searchByTerm(term).stream()
+                .map(TransactionResponse::fromEntity)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Get transactions for a specific card
+     */
+    public List<TransactionResponse> getTransactionsByCard(String cardNumber) {
+        log.info("Fetching transactions for card: ****{}",
+                cardNumber.length() > 4 ? cardNumber.substring(cardNumber.length() - 4) : cardNumber);
+
+        // If only 4 digits provided, use the last-four query
+        if (cardNumber.length() <= 4) {
+            return transactionRepository.findByCardLastFourDigits(cardNumber)
+                    .stream()
+                    .map(TransactionResponse::fromEntity)
+                    .collect(Collectors.toList());
+        }
+
+        return transactionRepository.findByCardNumberOrderByTransactionDateDescTransactionTimeDesc(cardNumber)
+                .stream()
                 .map(TransactionResponse::fromEntity)
                 .collect(Collectors.toList());
     }
@@ -271,6 +294,51 @@ public class TransactionService {
             case "PAYMENT" -> "Payment";
             case "ONLINE" -> "Online Shopping";
             default -> category;
+        };
+    }
+
+    /**
+     * Create a new transaction (COTRN02C - Transaction Add)
+     *
+     * Replaces COBOL PROCESS-TRAN-ADD paragraph.
+     */
+    @Transactional
+    public TransactionResponse createTransaction(CreateTransactionRequest request) {
+        log.info("Creating transaction for account: {}, type: {}, amount: {}",
+                request.getAccountId(), request.getTransactionType(), request.getAmount());
+
+        // Build transaction entity
+        Transaction transaction = Transaction.builder()
+                .accountId(request.getAccountId())
+                .transactionType(request.getTransactionType())
+                .transactionCategory(request.getTransactionCategory())
+                .transactionSource(request.getTransactionSource() != null ? request.getTransactionSource() : "ONLINE")
+                .transactionDesc(request.getTransactionDesc())
+                .transactionAmount(calculateSignedAmount(request.getTransactionType(), request.getAmount()))
+                .merchantId(request.getMerchantId())
+                .merchantName(request.getMerchantName())
+                .merchantCity(request.getMerchantCity())
+                .merchantZip(request.getMerchantZip())
+                .cardNumber(request.getCardNumber())
+                .transactionDate(LocalDate.now())
+                .transactionTime(LocalTime.now())
+                .build();
+
+        Transaction savedTransaction = transactionRepository.save(transaction);
+        log.info("Transaction created with ID: {}", savedTransaction.getTransactionId());
+
+        return TransactionResponse.fromEntity(savedTransaction);
+    }
+
+    /**
+     * Calculate signed amount based on transaction type
+     * SALE/CASH/FEE = negative (debit), PYMT/RFND = positive (credit)
+     */
+    private BigDecimal calculateSignedAmount(String type, BigDecimal amount) {
+        return switch (type) {
+            case "SALE", "CASH", "FEE" -> amount.negate();
+            case "PYMT", "RFND" -> amount;
+            default -> amount;
         };
     }
 }

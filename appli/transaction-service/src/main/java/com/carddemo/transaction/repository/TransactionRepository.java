@@ -38,6 +38,12 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     List<Transaction> findByCardNumberOrderByTransactionDateDescTransactionTimeDesc(String cardNumber);
 
     /**
+     * Find transactions by card's last 4 digits
+     */
+    @Query("SELECT t FROM Transaction t WHERE t.cardNumber LIKE CONCAT('%', :lastFour) ORDER BY t.transactionDate DESC, t.transactionTime DESC")
+    List<Transaction> findByCardLastFourDigits(@Param("lastFour") String lastFour);
+
+    /**
      * Find transactions by customer ID (across all their accounts)
      */
     @Query(value = "SELECT t.* FROM transactions t " +

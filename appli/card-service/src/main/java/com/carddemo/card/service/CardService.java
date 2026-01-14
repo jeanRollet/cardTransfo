@@ -191,6 +191,104 @@ public class CardService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Get card by last 4 digits (for frontend navigation)
+     * Note: Returns first matching card - in production should use additional identifiers
+     */
+    public CardResponse getCardByLastFour(String lastFour) {
+        log.info("Fetching card by last 4 digits: {}", lastFour);
+
+        List<CreditCard> cards = cardRepository.findByLastFourDigits(lastFour);
+
+        if (cards.isEmpty()) {
+            throw CardException.cardNotFound("****" + lastFour);
+        }
+
+        // Return first match - in production, should use additional context
+        return CardResponse.fromEntity(cards.get(0));
+    }
+
+    /**
+     * Reissue a card (create renewal request)
+     * In production, this would trigger card production workflow
+     */
+    @Transactional
+    public CardResponse reissueCard(String cardNumber) {
+        log.info("Processing reissue request for card: ****{}",
+                cardNumber.length() > 4 ? cardNumber.substring(cardNumber.length() - 4) : "****");
+
+        CreditCard card = cardRepository.findById(cardNumber)
+                .orElseThrow(() -> CardException.cardNotFound(cardNumber));
+
+        // In production: create reissue record, trigger card production workflow
+        // For demo: just log and return current card
+        log.info("Reissue request logged for card account: {}", card.getAccountId());
+
+        return CardResponse.fromEntity(card);
+    }
+
+    /**
+     * Update card status by last 4 digits
+     */
+    @Transactional
+    public CardResponse updateCardStatusByLastFour(String lastFour, UpdateCardStatusRequest request) {
+        log.info("Updating card status by last 4: {} to {}", lastFour, request.getStatus());
+
+        CreditCard card = findCardByLastFour(lastFour);
+        validateStatusTransition(card, request.getStatus());
+        card.setActiveStatus(request.getStatus());
+        CreditCard savedCard = cardRepository.save(card);
+
+        log.info("Card status updated successfully");
+        return CardResponse.fromEntity(savedCard);
+    }
+
+    /**
+     * Block card by last 4 digits
+     */
+    @Transactional
+    public CardResponse blockCardByLastFour(String lastFour, String reason) {
+        log.warn("Blocking card by last 4: {}, reason: {}", lastFour, reason);
+
+        CreditCard card = findCardByLastFour(lastFour);
+        if (card.isBlocked()) {
+            throw CardException.cardAlreadyBlocked(card.getCardNumber());
+        }
+
+        card.setActiveStatus("S");
+        CreditCard savedCard = cardRepository.save(card);
+
+        log.info("Card blocked successfully");
+        return CardResponse.fromEntity(savedCard);
+    }
+
+    /**
+     * Reissue card by last 4 digits
+     */
+    @Transactional
+    public CardResponse reissueCardByLastFour(String lastFour) {
+        log.info("Processing reissue request for card ending: {}", lastFour);
+
+        CreditCard card = findCardByLastFour(lastFour);
+
+        // In production: create reissue record, trigger card production workflow
+        // For demo: just log and return current card
+        log.info("Reissue request logged for card account: {}", card.getAccountId());
+
+        return CardResponse.fromEntity(card);
+    }
+
+    /**
+     * Helper to find card by last 4 digits
+     */
+    private CreditCard findCardByLastFour(String lastFour) {
+        List<CreditCard> cards = cardRepository.findByLastFourDigits(lastFour);
+        if (cards.isEmpty()) {
+            throw CardException.cardNotFound("****" + lastFour);
+        }
+        return cards.get(0);
+    }
+
     // Private helper methods
 
     /**

@@ -291,19 +291,26 @@ const CardList: React.FC = () => {
                 </div>
 
                 {/* Action buttons */}
-                {card.isActive && !card.isExpired && (
-                  <div className="mt-4 flex justify-end">
+                <div className="mt-4 flex justify-between items-center">
+                  <button
+                    onClick={() => navigate(`/cards/${encodeURIComponent(card.lastFourDigits)}`)}
+                    className="bg-blue-500 hover:bg-blue-600 text-white text-sm px-3 py-1 rounded"
+                  >
+                    View Details
+                  </button>
+                  {card.isActive && !card.isExpired && (
                     <button
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         setSelectedCard(card);
                         setShowBlockModal(true);
                       }}
                       className="bg-red-500 hover:bg-red-600 text-white text-sm px-3 py-1 rounded"
                     >
-                      Block Card
+                      Block
                     </button>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             ))}
           </div>

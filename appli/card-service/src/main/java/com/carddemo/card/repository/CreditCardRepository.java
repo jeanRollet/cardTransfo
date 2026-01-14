@@ -89,4 +89,11 @@ public interface CreditCardRepository extends JpaRepository<CreditCard, String> 
             "WHERE a.customer_id = :customerId " +
             "ORDER BY cc.issued_date DESC", nativeQuery = true)
     List<CreditCard> findByCustomerId(@Param("customerId") Integer customerId);
+
+    /**
+     * Find card by last 4 digits (for frontend navigation)
+     * Note: In production, this should be combined with additional identifiers for security
+     */
+    @Query("SELECT c FROM CreditCard c WHERE c.cardNumber LIKE CONCAT('%', :lastFour)")
+    List<CreditCard> findByLastFourDigits(@Param("lastFour") String lastFour);
 }

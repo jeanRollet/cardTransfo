@@ -24,12 +24,36 @@ const Dashboard: React.FC = () => {
       path: '/transactions'
     },
     {
+      id: 'add-transaction',
+      title: 'Add Transaction',
+      description: 'COTRN02C - Transaction Add',
+      icon: '➕',
+      status: 'active',
+      path: '/transactions/add'
+    },
+    {
       id: 'cards',
       title: 'Card Management',
       description: 'COCRDLIC - Card List',
       icon: '💎',
       status: 'active',
       path: '/cards'
+    },
+    {
+      id: 'bill-payment',
+      title: 'Bill Payment',
+      description: 'COBIL00C - Pay Bills',
+      icon: '💰',
+      status: 'active',
+      path: '/bill-payment'
+    },
+    {
+      id: 'authorizations',
+      title: 'Pending Auth',
+      description: 'COAUTH0C - Authorizations',
+      icon: '🔐',
+      status: 'active',
+      path: '/authorizations'
     },
     {
       id: 'reports',

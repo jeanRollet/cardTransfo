@@ -4,8 +4,12 @@ import { useAuth } from './context/AuthContext';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 import CardList from './components/CardList';
+import CardDetail from './components/CardDetail';
 import AccountList from './components/AccountList';
 import TransactionList from './components/TransactionList';
+import TransactionAdd from './components/TransactionAdd';
+import BillPayment from './components/BillPayment';
+import PendingAuthorizations from './components/PendingAuthorizations';
 import ReportList from './components/ReportList';
 
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -70,6 +74,14 @@ const App: React.FC = () => {
         }
       />
       <Route
+        path="/cards/:cardNumber"
+        element={
+          <PrivateRoute>
+            <CardDetail />
+          </PrivateRoute>
+        }
+      />
+      <Route
         path="/accounts"
         element={
           <PrivateRoute>
@@ -82,6 +94,30 @@ const App: React.FC = () => {
         element={
           <PrivateRoute>
             <TransactionList />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/transactions/add"
+        element={
+          <PrivateRoute>
+            <TransactionAdd />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/bill-payment"
+        element={
+          <PrivateRoute>
+            <BillPayment />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/authorizations"
+        element={
+          <PrivateRoute>
+            <PendingAuthorizations />
           </PrivateRoute>
         }
       />
