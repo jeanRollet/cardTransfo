@@ -14,7 +14,7 @@ const TransactionAdd: React.FC = () => {
   const { user, logout, isAdmin, customerId } = useAuth();
   const navigate = useNavigate();
 
-  const [loading, setLoading] = useState(false);
+  const [, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');

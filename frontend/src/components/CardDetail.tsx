@@ -6,7 +6,7 @@ import transactionService, { TransactionResponse } from '../services/transaction
 
 const CardDetail: React.FC = () => {
   const { cardNumber } = useParams<{ cardNumber: string }>();
-  const { user, logout, isAdmin } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
 
   const [card, setCard] = useState<CardResponse | null>(null);
