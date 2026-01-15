@@ -16,7 +16,11 @@ export interface CardResponse {
   embossedName: string;
   expiryDate: string;
   expiryFormatted: string;
+  expiryMonth: string;
+  expiryYear: string;
+  cvvCode: string;
   status: string;
+  cardStatus: string;
   statusName: string;
   issuedDate: string;
   isExpired: boolean;
@@ -140,6 +144,41 @@ const cardService = {
       : `${API_URL}/${cardNumber}/reissue`;
     const response = await api.post<CardResponse>(
       endpoint,
+      {},
+      { headers: getAuthHeader() }
+    );
+    return response.data;
+  },
+
+  async getCardByLastFour(lastFour: string): Promise<CardResponse> {
+    const response = await api.get<CardResponse>(
+      `${API_URL}/by-last-four/${lastFour}`,
+      { headers: getAuthHeader() }
+    );
+    return response.data;
+  },
+
+  async updateCardStatusByLastFour(lastFour: string, request: { status: string; reason?: string }): Promise<CardResponse> {
+    const response = await api.put<CardResponse>(
+      `${API_URL}/by-last-four/${lastFour}/status`,
+      request,
+      { headers: getAuthHeader() }
+    );
+    return response.data;
+  },
+
+  async blockCardByLastFour(lastFour: string, reason: string): Promise<CardResponse> {
+    const response = await api.post<CardResponse>(
+      `${API_URL}/by-last-four/${lastFour}/block`,
+      { reason },
+      { headers: getAuthHeader() }
+    );
+    return response.data;
+  },
+
+  async reissueCardByLastFour(lastFour: string): Promise<CardResponse> {
+    const response = await api.post<CardResponse>(
+      `${API_URL}/by-last-four/${lastFour}/reissue`,
       {},
       { headers: getAuthHeader() }
     );

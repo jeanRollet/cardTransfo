@@ -5,7 +5,9 @@ import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 import CardList from './components/CardList';
 import CardDetail from './components/CardDetail';
+import CardUpdate from './components/CardUpdate';
 import AccountList from './components/AccountList';
+import AccountUpdate from './components/AccountUpdate';
 import TransactionList from './components/TransactionList';
 import TransactionAdd from './components/TransactionAdd';
 import BillPayment from './components/BillPayment';
@@ -82,10 +84,42 @@ const App: React.FC = () => {
         }
       />
       <Route
+        path="/cards/update"
+        element={
+          <PrivateRoute>
+            <CardUpdate />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/cards/update/:cardNumber"
+        element={
+          <PrivateRoute>
+            <CardUpdate />
+          </PrivateRoute>
+        }
+      />
+      <Route
         path="/accounts"
         element={
           <PrivateRoute>
             <AccountList />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/accounts/update"
+        element={
+          <PrivateRoute>
+            <AccountUpdate />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/accounts/update/:accountId"
+        element={
+          <PrivateRoute>
+            <AccountUpdate />
           </PrivateRoute>
         }
       />

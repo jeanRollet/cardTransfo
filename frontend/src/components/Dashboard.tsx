@@ -16,6 +16,14 @@ const Dashboard: React.FC = () => {
       path: '/accounts'
     },
     {
+      id: 'account-update',
+      title: 'Account Update',
+      description: 'COACTUPC - Update Account',
+      icon: '📝',
+      status: 'active',
+      path: '/accounts/update'
+    },
+    {
       id: 'transactions',
       title: 'Transactions',
       description: 'COTRN00C - Transaction History',
@@ -38,6 +46,14 @@ const Dashboard: React.FC = () => {
       icon: '💎',
       status: 'active',
       path: '/cards'
+    },
+    {
+      id: 'card-update',
+      title: 'Card Update',
+      description: 'COCRDUPC - Update Card',
+      icon: '🔄',
+      status: 'active',
+      path: '/cards/update'
     },
     {
       id: 'bill-payment',
